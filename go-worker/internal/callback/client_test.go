@@ -58,7 +58,7 @@ func TestSend_HMACSignatureCorrect(t *testing.T) {
 
 		// Verify the signature against the body using the same secret.
 		var body bytes.Buffer
-		body.ReadFrom(r.Body)
+		_, _ = body.ReadFrom(r.Body)
 
 		mac := hmac.New(sha256.New, []byte(secret))
 		mac.Write(body.Bytes())
@@ -154,7 +154,7 @@ func TestSend_WorkerIDIsSetInPayload(t *testing.T) {
 	var received payload.CallbackPayload
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		json.NewDecoder(r.Body).Decode(&received)
+		_ = json.NewDecoder(r.Body).Decode(&received)
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()

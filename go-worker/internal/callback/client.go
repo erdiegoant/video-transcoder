@@ -91,7 +91,7 @@ func (c *Client) post(ctx context.Context, url string, body []byte, sig string) 
 	if err != nil {
 		return fmt.Errorf("http request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode >= 500 {
 		return fmt.Errorf("server error: %s", resp.Status)

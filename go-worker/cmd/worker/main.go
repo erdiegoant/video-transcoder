@@ -40,7 +40,11 @@ func main() {
 		slog.Error("redis init failed", "error", err)
 		os.Exit(1)
 	}
-	defer q.Close()
+	defer func() {
+		if err := q.Close(); err != nil {
+			slog.Error("failed to close queue connection", "error", err)
+		}
+	}()
 
 	s, err := storage.New(cfg)
 	if err != nil {

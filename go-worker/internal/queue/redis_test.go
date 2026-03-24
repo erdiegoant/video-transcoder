@@ -29,7 +29,7 @@ func TestPop_MovesJobToProcessingList(t *testing.T) {
 	c, mr := newTestConsumer(t)
 	ctx := context.Background()
 
-	mr.Lpush("queue:transcode", `{"job_uuid":"abc"}`)
+	_, _ = mr.Lpush("queue:transcode", `{"job_uuid":"abc"}`)
 
 	payload, err := c.Pop(ctx)
 	if err != nil {
@@ -56,7 +56,7 @@ func TestAck_RemovesJobFromProcessingList(t *testing.T) {
 	c, mr := newTestConsumer(t)
 	ctx := context.Background()
 
-	mr.Lpush("queue:transcode", `{"job_uuid":"abc"}`)
+	_, _ = mr.Lpush("queue:transcode", `{"job_uuid":"abc"}`)
 
 	payload, _ := c.Pop(ctx)
 
@@ -74,7 +74,7 @@ func TestNack_RequeuesJobOntoSourceQueue(t *testing.T) {
 	c, mr := newTestConsumer(t)
 	ctx := context.Background()
 
-	mr.Lpush("queue:transcode", `{"job_uuid":"abc"}`)
+	_, _ = mr.Lpush("queue:transcode", `{"job_uuid":"abc"}`)
 
 	payload, _ := c.Pop(ctx)
 
