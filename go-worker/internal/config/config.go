@@ -15,6 +15,7 @@ type Config struct {
 	MinioAccessKey string
 	MinioSecretKey string
 	MinioUseSSL    bool
+	CallbackSecret string // HMAC secret shared with Laravel for webhook signing
 	WorkerID       string // identifies which instance processed a job (pod name in K8s)
 	FFmpegPath     string // default: "ffmpeg"
 	FFprobePath    string // default: "ffprobe"
@@ -65,6 +66,7 @@ func Load() (*Config, error) {
 		MinioAccessKey: required("MINIO_ACCESS_KEY"),
 		MinioSecretKey: required("MINIO_SECRET_KEY"),
 		MinioUseSSL:    os.Getenv("MINIO_USE_SSL") == "true",
+		CallbackSecret: required("CALLBACK_SECRET"),
 		WorkerID:       optional("WORKER_ID", workerID),
 		FFmpegPath:     optional("FFMPEG_PATH", "ffmpeg"),
 		FFprobePath:    optional("FFPROBE_PATH", "ffprobe"),

@@ -10,6 +10,7 @@ func setRequiredEnv(t *testing.T) {
 	t.Setenv("MINIO_ENDPOINT", "minio:9000")
 	t.Setenv("MINIO_ACCESS_KEY", "minioadmin")
 	t.Setenv("MINIO_SECRET_KEY", "minioadmin")
+	t.Setenv("CALLBACK_SECRET", "test-secret")
 }
 
 func TestLoad_AllVarsPresent(t *testing.T) {

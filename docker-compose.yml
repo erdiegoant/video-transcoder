@@ -91,12 +91,20 @@ services:
       - "8025:8025"
       - "1025:1025"
 
-  # go-worker:
-  #   build: ./go-worker
-  #   env_file: ./go-worker/.env
-  #   depends_on:
-  #     - redis
-  #     - minio
+  go-worker:
+    build: ./go-worker
+    environment:
+      REDIS_URL: redis://redis:6379
+      REDIS_QUEUE: queue:transcode
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      CALLBACK_SECRET: local-dev-secret
+      MAX_CONCURRENT: "4"
+      JOB_TIMEOUT_SECS: "300"
+    depends_on:
+      - redis
+      - minio
 
 volumes:
   pgdata:
