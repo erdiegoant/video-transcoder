@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\UploadVideoRequest;
+use App\Models\TranscodeJob;
 use App\Models\Video;
 use App\Services\VideoUploadService;
 use Illuminate\Http\JsonResponse;
@@ -43,11 +44,11 @@ class VideoController extends Controller
         return response()->json($video->load('transcodeJobs'));
     }
 
-    public function download(Request $request, Video $video, int $jobId): RedirectResponse
+    public function download(Request $request, Video $video, TranscodeJob $job): RedirectResponse
     {
         $this->authorize('view', $video);
 
-        $job = $video->transcodeJobs()->where('id', $jobId)->where('status', 'completed')->firstOrFail();
+        abort_if($job->video_id !== $video->id || $job->status !== 'completed', 404);
 
         $url = Storage::disk('outputs')->temporaryUrl($job->output_path, now()->addMinutes(15));
 
