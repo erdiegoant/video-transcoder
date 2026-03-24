@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  go:
+    name: Go — lint & test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: go-worker
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go-worker/go.mod
+          cache-dependency-path: go-worker/go.sum
+
+      - name: Build
+        run: go build ./...
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          working-directory: go-worker
+
+      - name: Test
+        run: go test -race ./...
+
+  laravel:
+    name: Laravel — lint & test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: laravel-app
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: mbstring, xml, ctype, fileinfo, json, tokenizer, sqlite3
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Set up environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Lint (Pint)
+        run: vendor/bin/pint --test
+
+      - name: Test (Pest)
+        run: php artisan test --compact
