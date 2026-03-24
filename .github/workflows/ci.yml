@@ -32,6 +32,7 @@ jobs:
         uses: golangci/golangci-lint-action@v6
         with:
           working-directory: go-worker
+          version: latest
 
       - name: Test
         run: go test -race ./...
@@ -52,8 +53,17 @@ jobs:
           extensions: mbstring, xml, ctype, fileinfo, json, tokenizer, sqlite3
           coverage: none
 
-      - name: Install dependencies
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          cache: npm
+          cache-dependency-path: laravel-app/package-lock.json
+
+      - name: Install PHP dependencies
         run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Install JS dependencies & build assets
+        run: npm ci && npm run build
 
       - name: Set up environment
         run: |
