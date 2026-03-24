@@ -7,6 +7,27 @@ use App\Models\Video;
 
 class TranscodeJobService
 {
+    public function buildSingleJobPayload(TranscodeJob $job): array
+    {
+        $video = $job->video;
+        $outputKeyPrefix = "outputs/users/{$video->user_id}/{$video->uuid}/";
+
+        return [
+            'job_uuid' => $job->job_uuid,
+            'video_id' => $video->id,
+            'user_id' => $video->user_id,
+            'source_bucket' => config('filesystems.disks.uploads.bucket'),
+            'source_key' => $video->storage_path,
+            'output_bucket' => config('filesystems.disks.outputs.bucket'),
+            'output_key_prefix' => $outputKeyPrefix,
+            'operations' => [$this->buildOperation($job)],
+            'callback_url' => config('services.transcoder.callback_url'),
+            'callback_secret' => config('services.transcoder.webhook_secret'),
+            'max_attempts' => $job->max_attempts,
+            'enqueued_at' => now()->toIso8601String(),
+        ];
+    }
+
     public function buildPayload(Video $video): array
     {
         $outputKeyPrefix = "outputs/users/{$video->user_id}/{$video->uuid}/";
