@@ -1,6 +1,8 @@
-# 🎬 Automated Video Trimmer & Transcoder — Project Plan
+# Automated Video Trimmer & Transcoder — Project Plan
 
-**Stack:** Laravel 13 + Pest · Go 1.25 · Redis · MinIO (local) / S3 (prod) · PostgreSQL · Docker Compose → Kubernetes  
+> **Source of Truth** — This file governs all development decisions. Update it whenever a contract, schema, directory name, or approach changes. Never let the code drift from what's written here without updating this file first.
+
+**Stack:** Laravel 13 + Livewire 4 + Flux UI 2 + Pest · Go 1.25 · Redis · MinIO (local) / S3 (prod) · PostgreSQL · Docker Compose → Kubernetes
 **Goal:** Learn Go microservices architecture through a real, portfolio-worthy project. Server-side uploads in Phase 1; scale to K8s in Phase 2.
 
 ---
@@ -53,12 +55,53 @@
 
 ---
 
+## Implementation Status
+
+### Completed
+- [x] Laravel 13 project foundation (`laravel-app/` directory)
+- [x] Livewire 4 + Flux UI 2 + Tailwind CSS v4 configured
+- [x] Laravel Fortify: login, register, password reset, email verification
+- [x] Two-factor authentication (TOTP + recovery codes)
+- [x] User profile management (name, email update)
+- [x] Security settings page (password change, 2FA setup/disable)
+- [x] Appearance settings (light/dark/system theme)
+- [x] User account deletion
+- [x] Full Pest test suite for all auth & settings flows
+- [x] MCP integration (Laravel Boost + Herd)
+- [x] Laravel Pint configured
+
+### Remaining (Phase 1)
+- [ ] Step 1.0 — Docker Compose full-stack setup
+- [ ] Step 1.1 — Laravel: packages, migrations, models, upload endpoint, job dispatch
+- [ ] Step 1.2 — Go worker service (`go-worker/` directory doesn't exist yet)
+- [ ] Step 1.3 — Webhook handler (Laravel receives Go callbacks)
+- [ ] Step 1.4 — Dashboard UI (Livewire components for upload + video list)
+- [ ] Step 1.5 — Scheduled commands (ReconcileStuckJobs, PruneExpiredVideos)
+
+### Remaining (Phase 2)
+- [ ] Step 2.1 — Hardened multi-stage Dockerfiles
+- [ ] Step 2.2 — Kubernetes manifests + HPA
+- [ ] Step 2.3 — Prometheus metrics + structured logging
+- [ ] Step 2.4 — K8s CronJobs for DB backups
+
+---
+
+## Local Development Setup
+
+**Current:** Laravel Herd serves `laravel-app/` at `https://video-transcoder.test`. Uses SQLite + database queue. This remains the primary environment for Laravel-only development work.
+
+**Docker Compose:** Required only when testing the full pipeline (Go worker + Redis + MinIO + PostgreSQL together). Step 1.0 sets this up.
+
+**Rule:** During Steps 1.1–1.5, use Herd for rapid iteration on Laravel code. Switch to Docker Compose only when end-to-end pipeline testing is needed.
+
+---
+
 ## Monorepo File Structure
 
 ```
-videotrimmer/
+video-transcoder/                         # Actual root directory name
 │
-├── laravel/                              # Laravel 13 application
+├── laravel-app/                          # Laravel 13 application (already scaffolded)
 │   ├── app/
 │   │   ├── Http/
 │   │   │   ├── Controllers/
@@ -115,6 +158,7 @@ videotrimmer/
 │   │       └── WebhookServiceTest.php
 │   ├── .env                                     # Laravel env (separate from Go)
 │   ├── .env.testing
+│   ├── CLAUDE.md                                # Laravel Boost conventions (must follow)
 │   └── Dockerfile
 │
 ├── go-worker/                            # Go 1.25 microservice
@@ -194,6 +238,7 @@ CREATE TABLE videos (
     width               INTEGER,
     height              INTEGER,
     mime_type           VARCHAR(100) NOT NULL,
+    content_hash        VARCHAR(64),             -- SHA-256 of file bytes; used for deduplication
     status              ENUM('pending','queued','processing','completed','failed') DEFAULT 'pending',
     error_message       TEXT,
     created_at          TIMESTAMP DEFAULT NOW(),
@@ -300,6 +345,33 @@ This is the agreed contract between services. **Treat it like an API — never c
 
 ---
 
+## Code Conventions
+
+All Laravel code must follow the rules in `laravel-app/CLAUDE.md`. Key rules:
+
+- Use `php artisan make:` for all new files (controllers, models, jobs, requests, etc.). Pass `--no-interaction`.
+- **Form Requests** for all validation — never inline validation in controllers.
+- **Service classes** for business logic — controllers stay thin (call a service, return a response).
+- Constructor property promotion; no empty constructors.
+- Explicit return type declarations on all methods.
+- Enum keys in TitleCase (e.g., `SubscriptionTier::Free`, `VideoStatus::Processing`).
+- `config('key')` everywhere — never `env()` outside of config files.
+- Named routes + `route()` helper for all URL generation.
+- Eloquent relationships + eager loading; avoid `DB::` raw queries.
+- **Livewire SFC** pattern for all dashboard components (same pattern as `resources/views/pages/settings/`).
+- **Pest** for all tests: `it()` + `expect()` syntax. Run with `php artisan test --compact`.
+- Run `vendor/bin/pint --dirty --format agent` after any PHP file changes.
+- Every change needs a test. Write or update tests before marking work done.
+
+**Skills to activate during development:**
+- `livewire-development` — any Livewire component work
+- `fluxui-development` — any `<flux:*>` component work
+- `pest-testing` — any test writing/editing
+- `tailwindcss-development` — any Tailwind CSS work
+- `fortify-development` — any auth feature work
+
+---
+
 ## Phase 1 — Docker Compose (Local Dev)
 
 ### Step 1.0 — Repository & Docker Setup
@@ -320,14 +392,14 @@ services:
     image: nginx:alpine
     ports: ["8080:80"]
     volumes:
-      - ./laravel:/var/www/html
+      - ./laravel-app:/var/www/html
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
     depends_on: [laravel]
 
   laravel:
-    build: ./laravel
+    build: ./laravel-app
     volumes:
-      - ./laravel:/var/www/html       # hot reload in dev
+      - ./laravel-app:/var/www/html   # hot reload in dev
     environment:
       - APP_ENV=local
     depends_on: [postgres, redis, minio]
@@ -393,14 +465,16 @@ volumes:
 
 **Tasks:**
 
-**1.1.a — Laravel install & config**
-- [ ] `laravel new laravel --pest` inside the `laravel/` directory
-- [ ] Install packages:
-    - `composer require league/flysystem-aws-s3-v3` (MinIO uses the S3 API)
-    - `composer require predis/predis` (Redis client for queue)
-- [ ] Configure `config/filesystems.php` to add an `s3` disk pointing to MinIO
-- [ ] Set `QUEUE_CONNECTION=redis` in `.env`
+**1.1.a — Laravel config (foundation already in place)**
+
+Laravel 13 + Livewire 4 + Flux UI 2 + Fortify + Pest are already installed in `laravel-app/`. Remaining setup:
+
+- [ ] `cd laravel-app && composer require league/flysystem-aws-s3-v3` (MinIO uses the S3 API)
+- [ ] `composer require predis/predis` (Redis client for queue)
+- [ ] Configure `config/filesystems.php` to add an `s3` disk pointing to MinIO (path-style endpoint required)
+- [ ] Set `QUEUE_CONNECTION=redis` in `.env` (currently `database` for Herd dev)
 - [ ] Configure `config/queue.php` with a `transcode` queue name
+- [ ] Switch `DB_CONNECTION` from `sqlite` to `pgsql` in `.env` for Docker Compose (keep sqlite for Herd dev via `.env.herd` or feature flag)
 
 **1.1.b — Migrations**
 - [ ] `php artisan make:migration add_subscription_fields_to_users_table`
@@ -443,6 +517,13 @@ volumes:
 
 ### Step 1.2 — Go Worker Foundation
 
+The `go-worker/` directory does not exist yet. Start with:
+```bash
+mkdir go-worker && cd go-worker
+go mod init videotrimmer/go-worker
+# Create cmd/worker/main.go and internal/ package structure
+```
+
 Build file by file. Each file should be reviewed/tested before moving to the next.
 
 **Build order:**
@@ -471,7 +552,7 @@ func Load() (*Config, error) // reads os.Getenv, returns error on missing requir
 
 **1.2.b — `internal/queue/redis.go`** *(similar to FreelanceFlow's queue)*
 
-Key difference from a simple `BLPOP`: use `RPOPLPUSH` for job safety.
+Key difference from a simple `BLPOP`: use `LMOVE` for job safety (`BRPOPLPUSH` was deprecated in Redis 6.2).
 ```go
 // The "processing" list acts as an in-flight tracker.
 // If the worker dies mid-job, a recovery goroutine can find it here.
@@ -483,8 +564,9 @@ type Consumer struct {
 }
 
 func (c *Consumer) Pop(ctx context.Context) ([]byte, error)
-    // BRPOPLPUSH sourceQueue processingKey timeout
+    // LMOVE sourceQueue processingKey RIGHT LEFT (with BLMOVE for blocking)
     // Atomically moves job from source → processing list
+    // go-redis/v9: client.BLMove(ctx, sourceQueue, processingKey, "RIGHT", "LEFT", timeout)
 
 func (c *Consumer) Ack(ctx context.Context, payload []byte) error
     // LREM processingKey 1 payload
@@ -497,10 +579,11 @@ func (c *Consumer) Nack(ctx context.Context, payload []byte) error
 
 func (c *Consumer) RecoverStale(ctx context.Context, olderThanMinutes int) error
     // Goroutine: scan processing list, requeue jobs that have been there too long
+    // LRANGE processingKey 0 -1 → parse timestamps → LMOVE back to source if stale
     // This handles the K8s pod-killed scenario
 ```
 
-**Go Learning Note:** `BRPOPLPUSH` is the classic reliable queue pattern. In PHP/Laravel you use `Queue::later()` or the job table for this — in Go you implement it explicitly. This makes the reliability contract visible and testable.
+**Go Learning Note:** `LMOVE` (and its blocking variant `BLMOVE`) is the modern reliable queue pattern, replacing the deprecated `BRPOPLPUSH`. In PHP/Laravel you use `Queue::later()` or the job table for this — in Go you implement it explicitly. This makes the reliability contract visible and testable.
 
 **1.2.c — `internal/storage/minio.go`** *(same role as FreelanceFlow's minio.go)*
 ```go
@@ -674,17 +757,33 @@ func main() {
 
 ---
 
-### Step 1.4 — Dashboard (Laravel)
+### Step 1.4 — Dashboard (Laravel + Livewire 4)
 
-**Goal:** Users can see their videos, statuses, and download processed files.
+**Goal:** Users can upload videos, see their status, and download processed files.
 
-**Tasks:**
-- [ ] Auth routes (Laravel Breeze or Fortify)
-- [ ] `DashboardController@index` — paginated list of user's videos with eager-loaded jobs
-- [ ] `VideoController@download` — generate a presigned temporary URL (15 min) from MinIO for the output file
-    - This is safe because it's authenticated through Laravel; the presigned URL is only served to the rightful owner
-- [ ] Status polling: simple `<meta http-equiv="refresh">` or a lightweight JS interval hitting `/api/videos/{id}/status`
-- [ ] Storage usage indicator: `auth()->user()->storage_used_bytes / storage_limit_bytes`
+Auth routes are already in place via Fortify. The dashboard at `/dashboard` currently has placeholder UI.
+
+**Livewire components to build** (use SFC pattern, matching `resources/views/pages/settings/`):
+
+- [ ] `VideoUpload` component (`resources/views/pages/dashboard/upload.blade.php`)
+    - Livewire 4 built-in file upload with `wire:model`
+    - Client-side drag-and-drop via Alpine.js
+    - Progress indicator using Livewire upload events (`uploading`, `progress`, `uploaded`)
+    - Triggers `VideoUploadService` on server, shows validation errors inline
+    - Uses `<flux:*>` components for form elements
+
+- [ ] `VideoList` component (`resources/views/pages/dashboard/video-list.blade.php`)
+    - Paginated list of `auth()->user()->videos()->with('transcodeJobs')->latest()->paginate(10)`
+    - Status badge per video: pending / queued / processing / completed / failed
+    - `wire:poll.5s` to auto-refresh job statuses (replaces meta-refresh — Livewire handles this cleanly)
+    - Download button for completed jobs — triggers `VideoController@download` for presigned URL
+    - Storage usage bar: `storage_used_bytes / storage_limit_bytes`
+
+- [ ] `VideoController@download` — generate presigned MinIO URL (15 min TTL) for output file
+    - Authenticated: only the video owner can trigger this
+    - Returns a redirect to the presigned URL (not exposing it in JSON to prevent sharing)
+
+**Dashboard layout:** Update `resources/views/dashboard.blade.php` to include both components side-by-side or stacked.
 
 ---
 
@@ -725,13 +824,13 @@ Schedule::command('videos:prune')->daily();
 ```dockerfile
 FROM composer:2 AS deps
 WORKDIR /app
-COPY laravel/composer.* .
+COPY laravel-app/composer.* .
 RUN composer install --no-dev --optimize-autoloader
 
 FROM php:8.5-fpm-alpine AS runtime
 RUN docker-php-ext-install pdo pdo_pgsql opcache
 COPY --from=deps /app/vendor /var/www/html/vendor
-COPY laravel/ /var/www/html/
+COPY laravel-app/ /var/www/html/
 # OPcache config for production
 RUN echo "opcache.enable=1\nopcache.memory_consumption=256" >> /usr/local/etc/php/conf.d/opcache.ini
 ```
@@ -740,9 +839,9 @@ RUN echo "opcache.enable=1\nopcache.memory_consumption=256" >> /usr/local/etc/ph
 ```dockerfile
 FROM golang:1.25-alpine AS builder
 WORKDIR /app
-COPY go-worker/go.mod go-worker/go.sum ./
+COPY go.mod go.sum ./
 RUN go mod download
-COPY go-worker/ .
+COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /worker ./cmd/worker
 
 FROM alpine:3.21 AS runtime
@@ -1192,7 +1291,7 @@ fresh:
 	docker compose exec laravel php artisan migrate:fresh --seed
 
 test-laravel:
-	docker compose exec laravel php artisan test --parallel
+	docker compose exec laravel php artisan test --compact --parallel
 
 test-go:
 	docker compose exec go-worker go test ./...
