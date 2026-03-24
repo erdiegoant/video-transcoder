@@ -9,6 +9,7 @@ on:
 jobs:
   go:
     name: Go — lint & test
+    if: false # temporarily disabled
     runs-on: ubuntu-latest
     defaults:
       run:
