@@ -7,6 +7,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
@@ -19,22 +20,37 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, TwoFactorAuthenticatable;
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'monthly_upload_reset' => 'datetime',
+            'storage_used_bytes' => 'integer',
+            'storage_limit_bytes' => 'integer',
+            'monthly_upload_count' => 'integer',
         ];
     }
 
-    /**
-     * Get the user's initials
-     */
+    public function videos(): HasMany
+    {
+        return $this->hasMany(Video::class);
+    }
+
+    public function storageUsagePercent(): float
+    {
+        if ($this->storage_limit_bytes === 0) {
+            return 0.0;
+        }
+
+        return round(($this->storage_used_bytes / $this->storage_limit_bytes) * 100, 1);
+    }
+
+    public function hasStorageAvailable(int $fileSizeBytes): bool
+    {
+        return ($this->storage_used_bytes + $fileSizeBytes) <= $this->storage_limit_bytes;
+    }
+
     public function initials(): string
     {
         return Str::of($this->name)
