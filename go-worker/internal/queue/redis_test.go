@@ -100,7 +100,7 @@ func TestPop_BlocksUntilJobArrives(t *testing.T) {
 	// Push a job after a short delay from a separate goroutine.
 	go func() {
 		time.Sleep(100 * time.Millisecond)
-		mr.Lpush("queue:transcode", `{"job_uuid":"delayed"}`)
+		_, _ = mr.Lpush("queue:transcode", `{"job_uuid":"delayed"}`)
 	}()
 
 	payload, err := c.Pop(ctx)
