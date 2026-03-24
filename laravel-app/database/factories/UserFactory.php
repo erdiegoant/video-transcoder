@@ -33,6 +33,11 @@ class UserFactory extends Factory
             'two_factor_secret' => null,
             'two_factor_recovery_codes' => null,
             'two_factor_confirmed_at' => null,
+            'subscription_tier' => 'free',
+            'monthly_upload_count' => 0,
+            'monthly_upload_reset' => null,
+            'storage_used_bytes' => 0,
+            'storage_limit_bytes' => 524288000, // 500 MB
         ];
     }
 

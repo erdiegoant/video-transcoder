@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    'transcoder' => [
+        'webhook_secret' => env('TRANSCODER_WEBHOOK_SECRET'),
+        'callback_url' => env('TRANSCODER_CALLBACK_URL', 'http://laravel/webhooks/transcode'),
+    ],
+
 ];
