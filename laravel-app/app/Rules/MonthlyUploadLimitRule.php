@@ -6,9 +6,9 @@ use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Support\Facades\Auth;
 
-class MonthlyUploadLimitRule implements ValidationRule
+readonly class MonthlyUploadLimitRule implements ValidationRule
 {
-    public function __construct(private readonly int $monthlyLimit = 20) {}
+    public function __construct(private int $monthlyLimit = 20) {}
 
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
