@@ -52,24 +52,52 @@ npm install && npm run dev
 php artisan migrate
 ```
 
-For the full pipeline (Go worker + Redis + MinIO + PostgreSQL), use Docker Compose (see Phase 1 in `PLAN.md`):
+For the full pipeline (Go worker + Redis + MinIO + PostgreSQL), use Docker Compose.
+
+> Docker Compose serves the app on **port 8080** to avoid conflicting with Herd (port 80).
 
 ```bash
-make up       # start all services
-make migrate  # run migrations
-make logs     # tail logs
+make up       # start all services (first run builds images)
+make migrate  # run migrations against PostgreSQL
+make logs     # tail logs from all services
 make down     # stop all services
 ```
+
+**First time only** — if `laravel-app/vendor/` doesn't exist on the host:
+
+```bash
+make install  # runs composer install inside the app container
+```
+
+**Service URLs:**
+
+| Service | URL |
+|---|---|
+| Laravel app | http://localhost:8080 |
+| MinIO console | http://localhost:9001 (minioadmin / minioadmin) |
+| Mailpit | http://localhost:8025 |
+
+**Other useful commands:**
+
+```bash
+make fresh    # wipe and re-seed the database
+make test     # run the Pest test suite inside the container
+make shell    # open a shell in the app container
+make build    # rebuild images without cache
+```
+
+The `docker-compose.override.yml` mounts `laravel-app/` into the running containers, so PHP changes are reflected immediately without rebuilding. The Go worker (`go-worker/`) is not yet implemented and is commented out in the compose file.
 
 ## Project Status
 
 - [x] Laravel foundation — auth, 2FA, settings, Livewire UI
-- [ ] Video models, migrations, upload API
-- [ ] MinIO/S3 storage integration
-- [ ] Go worker service
-- [ ] Webhook handler
-- [ ] Livewire dashboard (upload + video list)
-- [ ] Docker Compose full-stack setup
+- [x] Video models, migrations, upload API
+- [x] MinIO/S3 storage integration
+- [x] Webhook handler (HMAC-verified, idempotent)
+- [x] Livewire dashboard (upload + video list with polling)
+- [x] Scheduled commands (stuck job recovery, expired file pruning)
+- [x] Docker Compose full-stack setup
+- [ ] Go worker service (Step 1.2)
 - [ ] Kubernetes deployment (Phase 2)
 
 ## License

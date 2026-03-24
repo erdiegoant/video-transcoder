@@ -1,0 +1,104 @@
+services:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./laravel-app/public:/var/www/html/public
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - app
+
+  app:
+    build:
+      context: ./laravel-app
+    env_file: ./laravel-app/.env.docker
+    volumes:
+      - app-storage:/var/www/html/storage
+    depends_on:
+      - postgres
+      - redis
+      - minio
+
+  queue:
+    build:
+      context: ./laravel-app
+    command: php artisan queue:work redis --queue=transcode,default --tries=3 --sleep=3
+    env_file: ./laravel-app/.env.docker
+    volumes:
+      - app-storage:/var/www/html/storage
+    depends_on:
+      - postgres
+      - redis
+      - minio
+
+  scheduler:
+    build:
+      context: ./laravel-app
+    command: php artisan schedule:work
+    env_file: ./laravel-app/.env.docker
+    volumes:
+      - app-storage:/var/www/html/storage
+    depends_on:
+      - postgres
+      - redis
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: videotrimmer
+      POSTGRES_USER: dev
+      POSTGRES_PASSWORD: secret
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - miniodata:/data
+
+  minio-setup:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      sleep 3;
+      mc alias set local http://minio:9000 minioadmin minioadmin;
+      mc mb local/videotrimmer-uploads --ignore-existing;
+      mc mb local/videotrimmer-outputs --ignore-existing;
+      mc anonymous set download local/videotrimmer-outputs;
+      exit 0;
+      "
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+
+  # go-worker:
+  #   build: ./go-worker
+  #   env_file: ./go-worker/.env
+  #   depends_on:
+  #     - redis
+  #     - minio
+
+volumes:
+  pgdata:
+  miniodata:
+  app-storage:

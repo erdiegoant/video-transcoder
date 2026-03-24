@@ -1,0 +1,12 @@
+services:
+  app:
+    volumes:
+      - ./laravel-app:/var/www/html
+
+  queue:
+    volumes:
+      - ./laravel-app:/var/www/html
+
+  scheduler:
+    volumes:
+      - ./laravel-app:/var/www/html
