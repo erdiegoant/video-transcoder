@@ -86,7 +86,7 @@ make shell    # open a shell in the app container
 make build    # rebuild images without cache
 ```
 
-The `docker-compose.override.yml` mounts `laravel-app/` into the running containers, so PHP changes are reflected immediately without rebuilding. The Go worker (`go-worker/`) is not yet implemented and is commented out in the compose file.
+The `docker-compose.override.yml` mounts `laravel-app/` into the running containers, so PHP changes are reflected immediately without rebuilding.
 
 ## Project Status
 
@@ -97,7 +97,7 @@ The `docker-compose.override.yml` mounts `laravel-app/` into the running contain
 - [x] Livewire dashboard (upload + video list with polling)
 - [x] Scheduled commands (stuck job recovery, expired file pruning)
 - [x] Docker Compose full-stack setup
-- [ ] Go worker service (Step 1.2)
+- [x] Go worker service (FFmpeg, Redis queue, MinIO, HMAC callback)
 - [ ] Kubernetes deployment (Phase 2)
 
 ## License

@@ -52,10 +52,12 @@
 - [x] **Step 1.3** — Webhook handler: HMAC verification, idempotency, video status rollup (12 tests)
 - [x] **Step 1.4** — Dashboard UI: VideoUpload + VideoList Livewire components, web download route (13 tests)
 
-### Remaining (Phase 1)
-- [ ] **Step 1.0** — Docker Compose full-stack setup → [docs/step-1.0-docker-setup.md](docs/step-1.0-docker-setup.md)
-- [ ] **Step 1.2** — Go worker service → [docs/step-1.2-go-worker.md](docs/step-1.2-go-worker.md)
+- [x] **Step 1.0** — Docker Compose full-stack setup → [docs/step-1.0-docker-setup.md](docs/step-1.0-docker-setup.md)
+- [x] **Step 1.2** — Go worker service → [docs/step-1.2-go-worker.md](docs/step-1.2-go-worker.md)
 - [x] **Step 1.5** — Scheduled commands: ReconcileStuckJobs + PruneExpiredVideos (13 tests)
+
+### Remaining (Phase 1)
+None — Phase 1 is complete.
 
 ### Remaining (Phase 2)
 - [ ] **Step 2.x** — Kubernetes, Dockerfiles, observability → [docs/phase-2-kubernetes.md](docs/phase-2-kubernetes.md)
