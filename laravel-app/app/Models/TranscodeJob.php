@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\TranscodeStatus;
 use Database\Factories\TranscodeJobFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -34,6 +35,7 @@ class TranscodeJob extends Model
     protected function casts(): array
     {
         return [
+            'status' => TranscodeStatus::class,
             'trim_start_sec' => 'float',
             'trim_end_sec' => 'float',
             'thumbnail_at_sec' => 'float',

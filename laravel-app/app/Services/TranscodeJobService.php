@@ -22,7 +22,6 @@ class TranscodeJobService
             'output_key_prefix' => $outputKeyPrefix,
             'operations' => [$this->buildOperation($job)],
             'callback_url' => config('services.transcoder.callback_url'),
-            'callback_secret' => config('services.transcoder.webhook_secret'),
             'max_attempts' => $job->max_attempts,
             'enqueued_at' => now()->toIso8601String(),
         ];
@@ -42,7 +41,6 @@ class TranscodeJobService
             'output_key_prefix' => $outputKeyPrefix,
             'operations' => $video->transcodeJobs->map(fn ($job) => $this->buildOperation($job))->values()->all(),
             'callback_url' => config('services.transcoder.callback_url'),
-            'callback_secret' => config('services.transcoder.webhook_secret'),
             'max_attempts' => 3,
             'enqueued_at' => now()->toIso8601String(),
         ];

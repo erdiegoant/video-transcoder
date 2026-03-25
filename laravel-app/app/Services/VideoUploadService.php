@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\TranscodeStatus;
 use App\Jobs\DispatchTranscodeJob;
 use App\Models\TranscodeJob;
 use App\Models\User;
@@ -35,7 +36,7 @@ class VideoUploadService
                 'file_size_bytes' => $file->getSize(),
                 'content_hash' => $contentHash,
                 'mime_type' => $file->getMimeType(),
-                'status' => 'pending',
+                'status' => TranscodeStatus::Pending,
             ]);
 
             $user->increment('storage_used_bytes', $file->getSize());
@@ -51,12 +52,12 @@ class VideoUploadService
                     'trim_start_sec' => $operation['trim_start_sec'] ?? null,
                     'trim_end_sec' => $operation['trim_end_sec'] ?? null,
                     'thumbnail_at_sec' => $operation['thumbnail_at_sec'] ?? null,
-                    'status' => 'pending',
+                    'status' => TranscodeStatus::Pending,
                 ]);
             }
 
-            $video->update(['status' => 'queued']);
-            $video->transcodeJobs()->update(['status' => 'queued']);
+            $video->update(['status' => TranscodeStatus::Queued]);
+            $video->transcodeJobs()->update(['status' => TranscodeStatus::Queued->value]);
 
             DispatchTranscodeJob::dispatch($video->fresh(['transcodeJobs']));
 
@@ -68,7 +69,7 @@ class VideoUploadService
     {
         return $user->videos()
             ->where('content_hash', $contentHash)
-            ->whereNotIn('status', ['failed'])
+            ->where('status', '!=', TranscodeStatus::Failed)
             ->first();
     }
 }

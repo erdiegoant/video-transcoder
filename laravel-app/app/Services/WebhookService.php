@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\TranscodeStatus;
 use App\Events\TranscodeCompleted;
 use App\Models\TranscodeJob;
 use App\Models\Video;
@@ -10,23 +11,31 @@ class WebhookService
 {
     public function process(array $payload): void
     {
-        $job = TranscodeJob::where('job_uuid', $payload['job_uuid'])->first();
+        $job = TranscodeJob::where('job_uuid', $payload['job_uuid'] ?? '')->first();
 
         if (! $job) {
             return;
         }
 
         // Idempotency: ignore duplicate callbacks for already-settled jobs
-        if (in_array($job->status, ['completed', 'failed'])) {
+        if ($job->status->isTerminal()) {
             return;
         }
 
-        $isSuccess = $payload['status'] === 'completed';
+        $newStatus = TranscodeStatus::tryFrom($payload['status'] ?? '');
+
+        abort_if(
+            $newStatus === null || ! $job->status->canTransitionTo($newStatus),
+            422,
+            'Invalid status transition.'
+        );
+
+        $isSuccess = $newStatus === TranscodeStatus::Completed;
 
         $job->update([
-            'status' => $payload['status'],
+            'status' => $newStatus,
             'worker_id' => $payload['worker_id'] ?? null,
-            'error_message' => $payload['error_message'] ?: null,
+            'error_message' => ($payload['error_message'] ?? null) ?: null,
             'started_at' => $payload['started_at'] ?? null,
             'completed_at' => $payload['completed_at'] ?? null,
             'output_path' => $isSuccess ? $this->extractOutputPath($payload) : null,
@@ -47,10 +56,13 @@ class WebhookService
 
         $statuses = $video->transcodeJobs->pluck('status');
 
-        if ($statuses->every(fn ($s) => $s === 'completed')) {
-            $video->update(['status' => 'completed']);
-        } elseif ($statuses->contains('failed') && $statuses->doesntContain('pending') && $statuses->doesntContain('queued') && $statuses->doesntContain('processing')) {
-            $video->update(['status' => 'failed']);
+        if ($statuses->every(fn (TranscodeStatus $s) => $s === TranscodeStatus::Completed)) {
+            $video->update(['status' => TranscodeStatus::Completed]);
+        } elseif ($statuses->contains(TranscodeStatus::Failed)
+            && $statuses->doesntContain(TranscodeStatus::Pending)
+            && $statuses->doesntContain(TranscodeStatus::Queued)
+            && $statuses->doesntContain(TranscodeStatus::Processing)) {
+            $video->update(['status' => TranscodeStatus::Failed]);
         }
     }
 

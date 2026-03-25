@@ -22,6 +22,7 @@ class UploadVideoRequest extends FormRequest
                 'required',
                 'file',
                 'mimes:mp4,mov,avi,webm',
+                'mimetypes:video/mp4,video/quicktime,video/x-msvideo,video/webm',
                 'max:512000',
                 new UserStorageQuotaRule,
                 new MonthlyUploadLimitRule,

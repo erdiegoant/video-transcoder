@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\TranscodeStatus;
 use App\Models\TranscodeJob;
 use App\Models\Video;
 use Illuminate\Support\Facades\Redis;
@@ -17,7 +18,7 @@ test('requeues stuck processing job within attempt limit', function () {
 
     $this->artisan('transcode:reconcile')->assertSuccessful();
 
-    expect($job->fresh()->status)->toBe('queued');
+    expect($job->fresh()->status)->toBe(TranscodeStatus::Queued);
     expect($job->fresh()->attempts)->toBe(2);
 });
 
@@ -30,7 +31,7 @@ test('does not requeue job updated recently', function () {
 
     $this->artisan('transcode:reconcile')->assertSuccessful();
 
-    expect($job->fresh()->status)->toBe('processing');
+    expect($job->fresh()->status)->toBe(TranscodeStatus::Processing);
 });
 
 test('marks job failed when max attempts exhausted', function () {
@@ -44,7 +45,7 @@ test('marks job failed when max attempts exhausted', function () {
 
     $this->artisan('transcode:reconcile')->assertSuccessful();
 
-    expect($job->fresh()->status)->toBe('failed');
+    expect($job->fresh()->status)->toBe(TranscodeStatus::Failed);
     expect($job->fresh()->error_message)->not->toBeNull();
 });
 
@@ -59,7 +60,7 @@ test('marks parent video failed when all jobs exhaust max attempts', function ()
 
     $this->artisan('transcode:reconcile')->assertSuccessful();
 
-    expect($video->fresh()->status)->toBe('failed');
+    expect($video->fresh()->status)->toBe(TranscodeStatus::Failed);
 });
 
 test('does not fail video when other jobs are still pending', function () {
@@ -76,7 +77,7 @@ test('does not fail video when other jobs are still pending', function () {
 
     $this->artisan('transcode:reconcile')->assertSuccessful();
 
-    expect($video->fresh()->status)->toBe('processing');
+    expect($video->fresh()->status)->toBe(TranscodeStatus::Processing);
 });
 
 test('outputs a message when no stuck jobs exist', function () {

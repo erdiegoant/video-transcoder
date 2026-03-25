@@ -14,7 +14,6 @@ type JobPayload struct {
 	OutputKeyPrefix string      `json:"output_key_prefix"`
 	Operations      []Operation `json:"operations"`
 	CallbackURL     string      `json:"callback_url"`
-	CallbackSecret  string      `json:"callback_secret"`
 	MaxAttempts     int         `json:"max_attempts"`
 	EnqueuedAt      time.Time   `json:"enqueued_at"`
 }

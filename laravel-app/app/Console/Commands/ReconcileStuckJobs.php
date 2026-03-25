@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\TranscodeStatus;
 use App\Models\TranscodeJob;
 use App\Models\Video;
 use App\Services\TranscodeJobService;
@@ -19,7 +20,7 @@ class ReconcileStuckJobs extends Command
         $staleThreshold = now()->subMinutes(30);
 
         $stuckJobs = TranscodeJob::query()
-            ->where('status', 'processing')
+            ->where('status', TranscodeStatus::Processing)
             ->where('updated_at', '<', $staleThreshold)
             ->with('video')
             ->get();
@@ -35,14 +36,14 @@ class ReconcileStuckJobs extends Command
         foreach ($stuckJobs as $job) {
             if ($job->isRetryable()) {
                 $job->increment('attempts');
-                $job->update(['status' => 'queued']);
+                $job->update(['status' => TranscodeStatus::Queued]);
 
                 Redis::rpush('queue:transcode', json_encode($jobService->buildSingleJobPayload($job)));
 
                 $this->line("  Requeued {$job->job_uuid} (attempt {$job->attempts}/{$job->max_attempts})");
             } else {
                 $job->update([
-                    'status' => 'failed',
+                    'status' => TranscodeStatus::Failed,
                     'error_message' => 'Job timed out and exhausted all retry attempts.',
                 ]);
 
@@ -61,8 +62,11 @@ class ReconcileStuckJobs extends Command
 
         $statuses = $video->transcodeJobs->pluck('status');
 
-        if ($statuses->contains('failed') && $statuses->doesntContain('pending') && $statuses->doesntContain('queued') && $statuses->doesntContain('processing')) {
-            $video->update(['status' => 'failed']);
+        if ($statuses->contains(TranscodeStatus::Failed)
+            && $statuses->doesntContain(TranscodeStatus::Pending)
+            && $statuses->doesntContain(TranscodeStatus::Queued)
+            && $statuses->doesntContain(TranscodeStatus::Processing)) {
+            $video->update(['status' => TranscodeStatus::Failed]);
         }
     }
 }

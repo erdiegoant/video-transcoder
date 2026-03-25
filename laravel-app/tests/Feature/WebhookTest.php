@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\TranscodeStatus;
 use App\Events\TranscodeCompleted;
 use App\Models\TranscodeJob;
 use App\Models\Video;
@@ -59,7 +60,7 @@ test('updates job status to completed on success callback', function () {
 
     $this->postJson(route('webhooks.transcode'), $payload, ['X-Signature' => signedRequest($payload)]);
 
-    expect($job->fresh()->status)->toBe('completed');
+    expect($job->fresh()->status)->toBe(TranscodeStatus::Completed);
     expect($job->fresh()->worker_id)->toBe('go-worker-pod-abc123');
     expect($job->fresh()->output_path)->not->toBeNull();
 });
@@ -70,7 +71,7 @@ test('updates job status to failed on error callback', function () {
 
     $this->postJson(route('webhooks.transcode'), $payload, ['X-Signature' => signedRequest($payload)]);
 
-    expect($job->fresh()->status)->toBe('failed');
+    expect($job->fresh()->status)->toBe(TranscodeStatus::Failed);
     expect($job->fresh()->error_message)->toBe('FFmpeg crashed');
 });
 
@@ -81,7 +82,7 @@ test('marks video completed when all jobs succeed', function () {
 
     $this->postJson(route('webhooks.transcode'), $payload, ['X-Signature' => signedRequest($payload)]);
 
-    expect($video->fresh()->status)->toBe('completed');
+    expect($video->fresh()->status)->toBe(TranscodeStatus::Completed);
 });
 
 test('marks video failed when all jobs fail', function () {
@@ -91,7 +92,7 @@ test('marks video failed when all jobs fail', function () {
 
     $this->postJson(route('webhooks.transcode'), $payload, ['X-Signature' => signedRequest($payload)]);
 
-    expect($video->fresh()->status)->toBe('failed');
+    expect($video->fresh()->status)->toBe(TranscodeStatus::Failed);
 });
 
 test('does not change video status while other jobs are still processing', function () {
@@ -102,7 +103,7 @@ test('does not change video status while other jobs are still processing', funct
 
     $this->postJson(route('webhooks.transcode'), $payload, ['X-Signature' => signedRequest($payload)]);
 
-    expect($video->fresh()->status)->toBe('processing');
+    expect($video->fresh()->status)->toBe(TranscodeStatus::Processing);
 });
 
 test('returns 200 and no-ops for duplicate callback on settled job', function () {
@@ -121,6 +122,22 @@ test('returns 200 with no-op for unknown job_uuid', function () {
 
     $this->postJson(route('webhooks.transcode'), $payload, ['X-Signature' => signedRequest($payload)])
         ->assertOk();
+});
+
+test('returns 422 for unrecognised status value in webhook payload', function () {
+    $job = TranscodeJob::factory()->create(['status' => 'processing']);
+    $payload = array_merge(webhookPayload($job), ['status' => 'bogus-status']);
+
+    $this->postJson(route('webhooks.transcode'), $payload, ['X-Signature' => signedRequest($payload)])
+        ->assertUnprocessable();
+});
+
+test('returns 422 for invalid status transition in webhook payload', function () {
+    $job = TranscodeJob::factory()->create(['status' => 'queued']);
+    $payload = webhookPayload($job, 'completed');
+
+    $this->postJson(route('webhooks.transcode'), $payload, ['X-Signature' => signedRequest($payload)])
+        ->assertUnprocessable();
 });
 
 test('fires TranscodeCompleted event on success', function () {

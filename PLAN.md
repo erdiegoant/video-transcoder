@@ -157,7 +157,6 @@ CREATE TABLE transcode_jobs (
     { "type": "thumbnail", "at_second": 3.0, "format": "jpg" }
   ],
   "callback_url": "http://laravel/webhooks/transcode",
-  "callback_secret": "sha256-hmac-shared-secret",
   "max_attempts": 3,
   "enqueued_at": "2026-03-21T10:00:00Z"
 }
@@ -187,7 +186,7 @@ CREATE TABLE transcode_jobs (
 }
 ```
 
-**HMAC Signature:** Go signs with `HMAC-SHA256(jsonBody, secret)`. Laravel verifies with `hash_equals()`. Header: `X-Signature: sha256=<hex>`.
+**HMAC Signature:** Go signs with `HMAC-SHA256(jsonBody, secret)`. Laravel verifies with `hash_equals()`. Header: `X-Signature: sha256=<hex>`. The secret is configured via the `CALLBACK_SECRET` env var on the Go worker — it is **not** included in the Redis job payload.
 
 ---
 

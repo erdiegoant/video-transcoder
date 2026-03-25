@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\TranscodeStatus;
 use App\Http\Requests\UploadVideoRequest;
 use App\Models\TranscodeJob;
 use App\Models\Video;
@@ -48,7 +49,7 @@ class VideoController extends Controller
     {
         $this->authorize('view', $video);
 
-        abort_if($job->video_id !== $video->id || $job->status !== 'completed', 404);
+        abort_if($job->video_id !== $video->id || $job->status !== TranscodeStatus::Completed, 404);
 
         $url = Storage::disk('outputs')->temporaryUrl($job->output_path, now()->addMinutes(15));
 

@@ -92,7 +92,7 @@ new class extends Component {
         <div class="space-y-3">
             @foreach ($this->videos as $video)
                 @php
-                    $statusColor = match($video->status) {
+                    $statusColor = match($video->status->value) {
                         'queued'     => 'blue',
                         'processing' => 'yellow',
                         'completed'  => 'green',
@@ -106,7 +106,7 @@ new class extends Component {
                         <div class="min-w-0 flex-1">
                             <div class="flex flex-wrap items-center gap-2">
                                 <flux:text class="truncate font-medium">{{ $video->original_filename }}</flux:text>
-                                <flux:badge color="{{ $statusColor }}" size="sm">{{ ucfirst($video->status) }}</flux:badge>
+                                <flux:badge color="{{ $statusColor }}" size="sm">{{ ucfirst($video->status->value) }}</flux:badge>
                             </div>
                             <flux:text class="mt-0.5 text-sm text-zinc-500">
                                 {{ number_format($video->file_size_bytes / 1_048_576, 1) }} MB
@@ -132,7 +132,7 @@ new class extends Component {
                         <div class="mt-3 space-y-1.5 border-t border-zinc-100 pt-3 dark:border-zinc-800">
                             @foreach ($video->transcodeJobs as $job)
                                 @php
-                                    $jobStatusColor = match($job->status) {
+                                    $jobStatusColor = match($job->status->value) {
                                         'queued'     => 'blue',
                                         'processing' => 'yellow',
                                         'completed'  => 'green',
@@ -149,10 +149,10 @@ new class extends Component {
                                             @if ($job->target_resolution) · {{ $job->target_resolution }} @endif
                                             @if ($job->operation_type === 'thumbnail') · {{ $job->thumbnail_at_sec }}s @endif
                                         </flux:text>
-                                        <flux:badge color="{{ $jobStatusColor }}" size="sm">{{ ucfirst($job->status) }}</flux:badge>
+                                        <flux:badge color="{{ $jobStatusColor }}" size="sm">{{ ucfirst($job->status->value) }}</flux:badge>
                                     </div>
 
-                                    @if ($job->status === 'completed' && $job->output_path)
+                                    @if ($job->status->value === 'completed' && $job->output_path)
                                         <a href="{{ route('videos.download', [$video, $job]) }}">
                                             <flux:button variant="ghost" size="sm" icon="arrow-down-tray">
                                                 Download

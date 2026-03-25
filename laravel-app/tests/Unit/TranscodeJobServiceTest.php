@@ -19,9 +19,10 @@ it('builds a valid redis payload matching the go worker contract', function () {
         'job_uuid', 'video_id', 'user_id',
         'source_bucket', 'source_key',
         'output_bucket', 'output_key_prefix',
-        'operations', 'callback_url', 'callback_secret',
+        'operations', 'callback_url',
         'max_attempts', 'enqueued_at',
     ]);
+    expect($payload)->not->toHaveKey('callback_secret');
     expect($payload['video_id'])->toBe($video->id);
     expect($payload['user_id'])->toBe($video->user_id);
 });

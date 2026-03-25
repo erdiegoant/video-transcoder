@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\TranscodeStatus;
 use Database\Factories\VideoFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -33,6 +34,7 @@ class Video extends Model
     protected function casts(): array
     {
         return [
+            'status' => TranscodeStatus::class,
             'file_size_bytes' => 'integer',
             'duration_seconds' => 'float',
             'width' => 'integer',
@@ -52,7 +54,7 @@ class Video extends Model
 
     public function scopePending(Builder $query): Builder
     {
-        return $query->where('status', 'pending');
+        return $query->where('status', TranscodeStatus::Pending);
     }
 
     public function scopeByUser(Builder $query, int $userId): Builder
@@ -62,11 +64,11 @@ class Video extends Model
 
     public function isCompleted(): bool
     {
-        return $this->status === 'completed';
+        return $this->status === TranscodeStatus::Completed;
     }
 
     public function isFailed(): bool
     {
-        return $this->status === 'failed';
+        return $this->status === TranscodeStatus::Failed;
     }
 }
