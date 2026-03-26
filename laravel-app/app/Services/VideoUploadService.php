@@ -19,13 +19,13 @@ class VideoUploadService
         $uuid = Str::uuid()->toString();
         $ext = $file->getClientOriginalExtension();
         $storagePath = "uploads/users/{$user->id}/{$uuid}.{$ext}";
-        $contentHash = hash('sha256', file_get_contents($file->getRealPath()));
+        $contentHash = hash_file('sha256', $file->getRealPath());
 
         if ($existingVideo = $this->findDuplicate($user, $contentHash)) {
             return $existingVideo;
         }
 
-        Storage::disk('uploads')->put($storagePath, file_get_contents($file->getRealPath()));
+        Storage::disk('uploads')->putFileAs("uploads/users/{$user->id}", $file, "{$uuid}.{$ext}");
 
         return DB::transaction(function () use ($user, $file, $uuid, $storagePath, $contentHash, $operations) {
             $video = Video::create([

@@ -96,6 +96,22 @@ test('storage_used_bytes is incremented after upload', function () {
     expect($user->fresh()->storage_used_bytes)->toBeGreaterThan(0);
 });
 
+test('upload endpoint returns 429 after exceeding rate limit', function () {
+    $user = User::factory()->create();
+    $payload = [
+        'file' => UploadedFile::fake()->create('video.mp4', 1024, 'video/mp4'),
+        'operations' => [['type' => 'transcode', 'format' => 'mp4']],
+    ];
+
+    for ($i = 0; $i < 10; $i++) {
+        $this->actingAs($user)->postJson('/api/videos', $payload);
+    }
+
+    $this->actingAs($user)
+        ->postJson('/api/videos', $payload)
+        ->assertTooManyRequests();
+});
+
 test('authenticated user can list their videos', function () {
     $user = User::factory()->create();
     Video::factory()->count(3)->create(['user_id' => $user->id]);
