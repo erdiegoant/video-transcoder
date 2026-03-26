@@ -109,5 +109,12 @@ func resolutionToScale(resolution string) (string, error) {
 		return "", fmt.Errorf("invalid resolution %q: expected format WxH e.g. 1280x720", resolution)
 	}
 
-	return fmt.Sprintf("scale=%s:%s", parts[0], parts[1]), nil
+	w, errW := strconv.Atoi(parts[0])
+	h, errH := strconv.Atoi(parts[1])
+
+	if errW != nil || errH != nil || w <= 0 || h <= 0 {
+		return "", fmt.Errorf("invalid resolution %q: width and height must be positive integers", resolution)
+	}
+
+	return fmt.Sprintf("scale=%d:%d", w, h), nil
 }

@@ -44,6 +44,26 @@ func TestBuildTranscodeArgs(t *testing.T) {
 			op:      payload.Operation{Format: "mp4", Resolution: "bad"},
 			wantErr: true,
 		},
+		{
+			name:    "non-numeric width returns error",
+			op:      payload.Operation{Format: "mp4", Resolution: "abcx720"},
+			wantErr: true,
+		},
+		{
+			name:    "non-numeric height returns error",
+			op:      payload.Operation{Format: "mp4", Resolution: "1280xdef"},
+			wantErr: true,
+		},
+		{
+			name:    "zero width returns error",
+			op:      payload.Operation{Format: "mp4", Resolution: "0x720"},
+			wantErr: true,
+		},
+		{
+			name:    "zero height returns error",
+			op:      payload.Operation{Format: "mp4", Resolution: "1280x0"},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
