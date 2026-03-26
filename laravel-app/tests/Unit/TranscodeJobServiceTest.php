@@ -1,8 +1,10 @@
 <?php
 
+use App\Jobs\DispatchTranscodeJob;
 use App\Models\TranscodeJob;
 use App\Models\Video;
 use App\Services\TranscodeJobService;
+use Illuminate\Support\Facades\Redis;
 
 beforeEach(function () {
     $this->service = new TranscodeJobService;
@@ -11,9 +13,8 @@ beforeEach(function () {
 it('builds a valid redis payload matching the go worker contract', function () {
     $video = Video::factory()->create();
     $job = TranscodeJob::factory()->transcode()->create(['video_id' => $video->id]);
-    $video->setRelation('transcodeJobs', collect([$job]));
 
-    $payload = $this->service->buildPayload($video);
+    $payload = $this->service->buildSingleJobPayload($job);
 
     expect($payload)->toHaveKeys([
         'job_uuid', 'video_id', 'user_id',
@@ -23,28 +24,25 @@ it('builds a valid redis payload matching the go worker contract', function () {
         'max_attempts', 'enqueued_at',
     ]);
     expect($payload)->not->toHaveKey('callback_secret');
+    expect($payload['job_uuid'])->toBe($job->job_uuid);
     expect($payload['video_id'])->toBe($video->id);
     expect($payload['user_id'])->toBe($video->user_id);
 });
 
-it('includes all operations in the payload', function () {
+it('payload contains exactly one operation', function () {
     $video = Video::factory()->create();
-    $transcodeJob = TranscodeJob::factory()->transcode()->create(['video_id' => $video->id]);
-    $thumbnailJob = TranscodeJob::factory()->thumbnail()->create(['video_id' => $video->id]);
-    $video->setRelation('transcodeJobs', collect([$transcodeJob, $thumbnailJob]));
+    $job = TranscodeJob::factory()->transcode()->create(['video_id' => $video->id]);
 
-    $payload = $this->service->buildPayload($video);
+    $payload = $this->service->buildSingleJobPayload($job);
 
-    expect($payload['operations'])->toHaveCount(2);
-    expect(collect($payload['operations'])->pluck('type')->all())->toContain('transcode', 'thumbnail');
+    expect($payload['operations'])->toHaveCount(1);
 });
 
 it('sets correct output key prefix based on user and video uuid', function () {
     $video = Video::factory()->create();
     $job = TranscodeJob::factory()->transcode()->create(['video_id' => $video->id]);
-    $video->setRelation('transcodeJobs', collect([$job]));
 
-    $payload = $this->service->buildPayload($video);
+    $payload = $this->service->buildSingleJobPayload($job);
 
     expect($payload['output_key_prefix'])->toBe("outputs/users/{$video->user_id}/{$video->uuid}/");
 });
@@ -57,10 +55,8 @@ it('builds correct transcode operation flags', function () {
         'target_format' => 'webm',
         'target_resolution' => '1920x1080',
     ]);
-    $video->setRelation('transcodeJobs', collect([$job]));
 
-    $payload = $this->service->buildPayload($video);
-    $operation = $payload['operations'][0];
+    $operation = $this->service->buildSingleJobPayload($job)['operations'][0];
 
     expect($operation['type'])->toBe('transcode');
     expect($operation['format'])->toBe('webm');
@@ -76,10 +72,8 @@ it('builds correct thumbnail operation flags', function () {
         'thumbnail_at_sec' => 5.0,
         'target_format' => 'jpg',
     ]);
-    $video->setRelation('transcodeJobs', collect([$job]));
 
-    $payload = $this->service->buildPayload($video);
-    $operation = $payload['operations'][0];
+    $operation = $this->service->buildSingleJobPayload($job)['operations'][0];
 
     expect($operation['type'])->toBe('thumbnail');
     expect($operation['at_second'])->toBe(5.0);
@@ -94,12 +88,22 @@ it('builds correct trim operation flags', function () {
         'trim_start_sec' => 10.0,
         'trim_end_sec' => 60.0,
     ]);
-    $video->setRelation('transcodeJobs', collect([$job]));
 
-    $payload = $this->service->buildPayload($video);
-    $operation = $payload['operations'][0];
+    $operation = $this->service->buildSingleJobPayload($job)['operations'][0];
 
     expect($operation['type'])->toBe('trim');
     expect($operation['start_sec'])->toBe(10.0);
     expect($operation['end_sec'])->toBe(60.0);
+});
+
+it('dispatch job pushes one redis message per transcode job', function () {
+    Redis::shouldReceive('rpush')->twice()->andReturn(1);
+
+    $video = Video::factory()->create();
+    TranscodeJob::factory()->transcode()->create(['video_id' => $video->id]);
+    TranscodeJob::factory()->thumbnail()->create(['video_id' => $video->id]);
+
+    $video->load('transcodeJobs');
+
+    dispatch(new DispatchTranscodeJob($video));
 });

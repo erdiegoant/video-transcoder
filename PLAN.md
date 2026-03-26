@@ -143,6 +143,8 @@ CREATE TABLE transcode_jobs (
 
 ### Redis Job Payload (Laravel → Go)
 
+One message is pushed per `TranscodeJob` (one operation per message). Each job has its own `job_uuid` and maps to exactly one webhook callback.
+
 ```json
 {
   "job_uuid": "550e8400-e29b-41d4-a716-446655440000",
@@ -153,8 +155,7 @@ CREATE TABLE transcode_jobs (
   "output_bucket": "videotrimmer-outputs",
   "output_key_prefix": "outputs/users/456/550e8400/",
   "operations": [
-    { "type": "transcode", "format": "webm", "resolution": "1280x720", "crf": 28 },
-    { "type": "thumbnail", "at_second": 3.0, "format": "jpg" }
+    { "type": "transcode", "format": "webm", "resolution": "1280x720", "crf": 28 }
   ],
   "callback_url": "http://laravel/webhooks/transcode",
   "max_attempts": 3,

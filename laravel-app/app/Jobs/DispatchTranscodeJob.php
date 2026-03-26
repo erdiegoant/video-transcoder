@@ -16,10 +16,12 @@ class DispatchTranscodeJob implements ShouldQueue
 
     public function handle(TranscodeJobService $service): void
     {
-        $payload = $service->buildPayload($this->video);
+        $this->video->loadMissing('transcodeJobs');
 
-        // Push raw JSON to Redis so the Go worker can consume it directly.
-        // We do NOT use Laravel's serialized queue format here — Go reads plain JSON.
-        Redis::rpush('queue:transcode', json_encode($payload));
+        // Push one Redis message per TranscodeJob so every job has its own UUID,
+        // can fail/succeed independently, and maps cleanly to a single callback.
+        foreach ($this->video->transcodeJobs as $job) {
+            Redis::rpush('queue:transcode', json_encode($service->buildSingleJobPayload($job)));
+        }
     }
 }
