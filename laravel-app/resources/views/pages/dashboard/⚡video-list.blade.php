@@ -10,6 +10,13 @@ use Livewire\WithPagination;
 new class extends Component {
     use WithPagination;
 
+    public int $userId;
+
+    public function mount(): void
+    {
+        $this->userId = Auth::id();
+    }
+
     #[Computed]
     public function videos(): \Illuminate\Pagination\LengthAwarePaginator
     {
@@ -43,8 +50,10 @@ new class extends Component {
     }
 
     #[On('video-uploaded')]
+    #[On('echo-private:App.Models.User.{userId},TranscodeJobStatusUpdated')]
     public function refresh(): void
     {
+        unset($this->videos);
         $this->resetPage();
     }
 
@@ -60,7 +69,7 @@ new class extends Component {
     }
 }; ?>
 
-<div wire:poll.5s>
+<div>
     <div class="mb-6 flex items-center justify-between">
         <div>
             <flux:heading size="lg" class="mb-1">Your Videos</flux:heading>

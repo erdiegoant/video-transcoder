@@ -14,7 +14,7 @@ new class extends Component {
 
     public bool $includeThumbnail = true;
 
-    public function upload(VideoUploadService $uploadService): void
+    public function transcode(VideoUploadService $uploadService): void
     {
         $this->validate([
             'video' => 'required|file|mimes:mp4,mov,avi,webm|max:512000',
@@ -25,7 +25,7 @@ new class extends Component {
         ];
 
         if ($this->includeThumbnail) {
-            $operations[] = ['type' => 'thumbnail', 'at_second' => 3.0];
+            $operations[] = ['type' => 'thumbnail', 'thumbnail_at_sec' => 3.0];
         }
 
         try {
@@ -42,7 +42,7 @@ new class extends Component {
     <flux:heading size="lg" class="mb-1">Upload Video</flux:heading>
     <flux:subheading class="mb-6">Upload a video to transcode it to a different format or resolution.</flux:subheading>
 
-    <form wire:submit="upload" class="space-y-5">
+    <form wire:submit="transcode" class="space-y-5">
         <flux:field>
             <flux:label>Video file</flux:label>
 

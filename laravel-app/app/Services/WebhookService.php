@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\TranscodeStatus;
 use App\Events\TranscodeCompleted;
+use App\Events\TranscodeJobStatusUpdated;
 use App\Models\TranscodeJob;
 use App\Models\Video;
 
@@ -45,8 +46,13 @@ class WebhookService
 
         $this->updateVideoStatus($video);
 
+        $freshJob = $job->fresh();
+        $freshVideo = $video->fresh();
+
+        TranscodeJobStatusUpdated::dispatch($freshVideo, $freshJob);
+
         if ($isSuccess) {
-            TranscodeCompleted::dispatch($video->fresh(), $job->fresh());
+            TranscodeCompleted::dispatch($freshVideo, $freshJob);
         }
     }
 

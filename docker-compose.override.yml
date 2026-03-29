@@ -10,3 +10,7 @@ services:
   scheduler:
     volumes:
       - ./laravel-app:/var/www/html
+
+  reverb:
+    volumes:
+      - ./laravel-app:/var/www/html

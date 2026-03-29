@@ -91,6 +91,16 @@ services:
       - "8025:8025"
       - "1025:1025"
 
+  reverb:
+    build:
+      context: ./laravel-app
+    command: php artisan reverb:start --host=0.0.0.0 --port=6001
+    env_file: ./laravel-app/.env.docker
+    ports:
+      - "6001:6001"
+    depends_on:
+      - redis
+
   go-worker:
     build: ./go-worker
     environment:
