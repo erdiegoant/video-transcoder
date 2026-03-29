@@ -105,6 +105,16 @@ func (w *Worker) process(ctx context.Context, raw []byte) error {
 
 	slog.Info("job started", "job_uuid", job.JobUUID, "operations", len(job.Operations))
 
+	// Notify Laravel that work has begun so it can transition queued → processing.
+	if err := w.callback.Send(ctx, job.CallbackURL, payload.CallbackPayload{
+		JobUUID:   job.JobUUID,
+		VideoID:   job.VideoID,
+		Status:    "processing",
+		StartedAt: startedAt,
+	}); err != nil {
+		slog.Warn("processing callback failed", "job_uuid", job.JobUUID, "error", err)
+	}
+
 	// Apply a per-job timeout so a runaway FFmpeg process can't block the goroutine forever.
 	jobCtx, cancel := context.WithTimeout(ctx, time.Duration(w.cfg.JobTimeoutSecs)*time.Second)
 	defer cancel()
