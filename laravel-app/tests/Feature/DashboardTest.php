@@ -70,7 +70,7 @@ test('upload rejects invalid mime type', function () {
     Livewire::actingAs($user)
         ->test('pages::dashboard.upload')
         ->set('video', UploadedFile::fake()->create('document.pdf', 100, 'application/pdf'))
-        ->call('upload')
+        ->call('transcode')
         ->assertHasErrors(['video']);
 });
 
@@ -83,7 +83,7 @@ test('upload dispatches video-uploaded event on success', function () {
     Livewire::actingAs($user)
         ->test('pages::dashboard.upload')
         ->set('video', UploadedFile::fake()->create('clip.mp4', 1024, 'video/mp4'))
-        ->call('upload')
+        ->call('transcode')
         ->assertDispatched('video-uploaded');
 });
 
