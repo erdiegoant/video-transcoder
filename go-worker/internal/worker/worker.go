@@ -73,6 +73,10 @@ func (w *Worker) processLoop(ctx context.Context) {
 			continue
 		}
 
+		if raw == nil {
+			continue // queue was empty during the blocking timeout — nothing to do
+		}
+
 		if err := w.process(ctx, raw); err != nil {
 			slog.Error("job failed", "error", err)
 

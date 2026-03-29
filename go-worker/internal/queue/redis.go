@@ -2,6 +2,7 @@ package queue
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -45,6 +46,10 @@ func New(redisURL, queueName string) (*Consumer, error) {
 func (c *Consumer) Pop(ctx context.Context) ([]byte, error) {
 	result, err := c.client.BLMove(ctx, c.sourceQueue, c.processingKey, "RIGHT", "LEFT", 5*time.Second).Bytes()
 	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			// Timeout with no job available — normal empty-queue signal.
+			return nil, nil
+		}
 		return nil, fmt.Errorf("BLMOVE failed: %w", err)
 	}
 
