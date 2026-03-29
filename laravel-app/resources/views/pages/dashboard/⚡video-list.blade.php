@@ -50,7 +50,7 @@ new class extends Component {
     }
 
     #[On('video-uploaded')]
-    #[On('echo-private:App.Models.User.{userId},TranscodeJobStatusUpdated')]
+    #[On('echo-private:App.Models.User.{userId},.TranscodeJobStatusUpdated')]
     public function refresh(): void
     {
         unset($this->videos);
