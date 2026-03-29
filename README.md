@@ -18,21 +18,21 @@ A full-stack automated video trimmer and transcoder built to learn Go microservi
 ## Architecture
 
 ```
-Browser → Laravel (upload + dashboard) → Redis queue → Go Worker → MinIO/S3
-                ↑                                            |
-                └──────── webhook callback (HMAC) ──────────┘
+Browser ←─ WebSocket (Reverb) ─── Laravel (upload + dashboard) → Redis queue → Go Worker → MinIO/S3
+                                           ↑                                         |
+                                           └──────── webhook callback (HMAC) ────────┘
 ```
 
 1. User uploads a video — Laravel validates, stores in MinIO, creates DB records, pushes a JSON job to Redis
-2. Go worker pulls the job, downloads the file, runs FFmpeg (transcode / trim / thumbnail)
-3. Worker uploads the result to MinIO and POSTs a signed webhook back to Laravel
-4. Laravel updates job status and notifies the user
+2. Go worker pulls the job, sends a `processing` callback to Laravel, then runs FFmpeg (transcode / trim / thumbnail)
+3. Worker uploads the result to MinIO and POSTs a signed `completed`/`failed` webhook back to Laravel
+4. Laravel updates job status and pushes real-time status updates to the browser via Reverb WebSockets
 
 ## Features
 
 - Video upload with quota enforcement (per-user storage + monthly limits)
 - Three operation types: **transcode** (format/resolution), **trim** (start/end), **thumbnail** (frame extraction)
-- Real-time job status dashboard with Livewire polling
+- Real-time job status updates via Laravel Reverb WebSockets (no polling)
 - Presigned download URLs for processed files
 - HMAC-signed webhook callbacks between Go and Laravel
 - Concurrent job processing with configurable goroutine pool
@@ -74,6 +74,7 @@ make install  # runs composer install inside the app container
 | Service | URL |
 |---|---|
 | Laravel app | http://localhost:8080 |
+| Reverb WebSocket | ws://localhost:6001 |
 | MinIO console | http://localhost:9001 (minioadmin / minioadmin) |
 | Mailpit | http://localhost:8025 |
 
@@ -94,7 +95,7 @@ The `docker-compose.override.yml` mounts `laravel-app/` into the running contain
 - [x] Video models, migrations, upload API
 - [x] MinIO/S3 storage integration
 - [x] Webhook handler (HMAC-verified, idempotent)
-- [x] Livewire dashboard (upload + video list with polling)
+- [x] Livewire dashboard (upload + video list with real-time WebSocket updates via Reverb)
 - [x] Scheduled commands (stuck job recovery, expired file pruning)
 - [x] Docker Compose full-stack setup
 - [x] Go worker service (FFmpeg, Redis queue, MinIO, HMAC callback)

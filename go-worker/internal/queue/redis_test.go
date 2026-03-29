@@ -20,6 +20,7 @@ func newTestConsumer(t *testing.T) (*Consumer, *miniredis.Miniredis) {
 		client:        redis.NewClient(&redis.Options{Addr: mr.Addr()}),
 		sourceQueue:   "queue:transcode",
 		processingKey: "queue:transcode:processing",
+		blockTimeout:  1 * time.Second,
 	}
 
 	return c, mr
@@ -122,5 +123,18 @@ func TestPop_ReturnsErrorOnContextCancel(t *testing.T) {
 	_, err := c.Pop(ctx)
 	if err == nil {
 		t.Fatal("Pop() expected error on cancelled context, got nil")
+	}
+}
+
+func TestPop_ReturnsNilNilOnEmptyQueueTimeout(t *testing.T) {
+	c, _ := newTestConsumer(t) // blockTimeout = 50ms
+
+	payload, err := c.Pop(context.Background())
+	if err != nil {
+		t.Fatalf("Pop() on empty queue returned error: %v", err)
+	}
+
+	if payload != nil {
+		t.Errorf("Pop() on empty queue returned payload %q, want nil", payload)
 	}
 }

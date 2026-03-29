@@ -18,8 +18,9 @@ import (
 // can be recovered by a separate reconciler (Laravel's ReconcileStuckJobs).
 type Consumer struct {
 	client        *redis.Client
-	sourceQueue   string // e.g. "queue:transcode"
-	processingKey string // e.g. "queue:transcode:processing"
+	sourceQueue   string        // e.g. "queue:transcode"
+	processingKey string        // e.g. "queue:transcode:processing"
+	blockTimeout  time.Duration // how long BLMOVE waits before returning nil
 }
 
 // New creates a Consumer connected to the given Redis URL.
@@ -34,6 +35,7 @@ func New(redisURL, queueName string) (*Consumer, error) {
 		client:        redis.NewClient(opts),
 		sourceQueue:   queueName,
 		processingKey: queueName + ":processing",
+		blockTimeout:  5 * time.Second,
 	}, nil
 }
 
@@ -44,7 +46,7 @@ func New(redisURL, queueName string) (*Consumer, error) {
 // BRPOPLPUSH. "RIGHT LEFT" means: take from the right end of the source
 // queue, push to the left end of the processing list.
 func (c *Consumer) Pop(ctx context.Context) ([]byte, error) {
-	result, err := c.client.BLMove(ctx, c.sourceQueue, c.processingKey, "RIGHT", "LEFT", 5*time.Second).Bytes()
+	result, err := c.client.BLMove(ctx, c.sourceQueue, c.processingKey, "RIGHT", "LEFT", c.blockTimeout).Bytes()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
 			// Timeout with no job available — normal empty-queue signal.
