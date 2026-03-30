@@ -13,13 +13,25 @@ const defaultCRF = 28
 // BuildTranscodeArgs returns the FFmpeg argument list for a transcode operation.
 // Supports output formats: mp4, webm, mkv, mov.
 //
-// Example output:
+// When TrimStart/TrimEnd are set on the operation, trimming is applied in the
+// same FFmpeg pass (no intermediate file). -ss is placed before -i for fast
+// input-seeking; -to is placed before the output path.
+//
+// Example output (no trim):
 //
 //	["-i", "input.mp4", "-c:v", "libvpx-vp9", "-crf", "28", "-b:v", "0", "-vf", "scale=1280:720", "output.webm"]
+//
+// Example output (with trim 10s–60s):
+//
+//	["-ss", "10.000000", "-i", "input.mp4", "-c:v", "libx264", "-crf", "28", "-to", "60.000000", "output.mp4"]
 func BuildTranscodeArgs(input, output string, op payload.Operation) ([]string, error) {
 	codec, err := codecForFormat(op.Format)
 	if err != nil {
 		return nil, err
+	}
+
+	if op.TrimEnd > 0 && op.TrimEnd <= op.TrimStart {
+		return nil, fmt.Errorf("trim_end (%f) must be greater than trim_start (%f)", op.TrimEnd, op.TrimStart)
 	}
 
 	crf := op.CRF
@@ -27,7 +39,14 @@ func BuildTranscodeArgs(input, output string, op payload.Operation) ([]string, e
 		crf = defaultCRF
 	}
 
-	args := []string{"-i", input, "-c:v", codec, "-crf", strconv.Itoa(crf)}
+	args := []string{}
+
+	// Input-seeking: place -ss before -i so FFmpeg seeks efficiently before decoding.
+	if op.TrimStart > 0 {
+		args = append(args, "-ss", fmt.Sprintf("%f", op.TrimStart))
+	}
+
+	args = append(args, "-i", input, "-c:v", codec, "-crf", strconv.Itoa(crf))
 
 	// VP9 requires -b:v 0 to use constant quality mode (CRF only, no bitrate cap).
 	if op.Format == "webm" {
@@ -41,6 +60,12 @@ func BuildTranscodeArgs(input, output string, op payload.Operation) ([]string, e
 		}
 
 		args = append(args, "-vf", scale)
+	}
+
+	// -to as an output option refers to the input timeline when combined with
+	// input-seeking (-ss before -i), giving accurate start–end trimming.
+	if op.TrimEnd > 0 {
+		args = append(args, "-to", fmt.Sprintf("%f", op.TrimEnd))
 	}
 
 	args = append(args, output)

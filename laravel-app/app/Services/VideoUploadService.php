@@ -42,7 +42,7 @@ class VideoUploadService
             $user->increment('storage_used_bytes', $file->getSize());
             $user->increment('monthly_upload_count');
 
-            foreach ($operations as $operation) {
+            foreach ($this->mergeOperations($operations) as $operation) {
                 TranscodeJob::create([
                     'video_id' => $video->id,
                     'job_uuid' => Str::uuid()->toString(),
@@ -63,6 +63,35 @@ class VideoUploadService
 
             return $video;
         });
+    }
+
+    /**
+     * When transcode and trim are both requested, fold the trim params into the
+     * transcode operation so they run as a single FFmpeg pass instead of two jobs.
+     *
+     * @param  array<int, array<string, mixed>>  $operations
+     * @return array<int, array<string, mixed>>
+     */
+    private function mergeOperations(array $operations): array
+    {
+        $transcodeIndex = null;
+        $trimIndex = null;
+
+        foreach ($operations as $i => $op) {
+            if ($op['type'] === 'transcode') {
+                $transcodeIndex = $i;
+            } elseif ($op['type'] === 'trim') {
+                $trimIndex = $i;
+            }
+        }
+
+        if ($transcodeIndex !== null && $trimIndex !== null) {
+            $operations[$transcodeIndex]['trim_start_sec'] = $operations[$trimIndex]['trim_start_sec'] ?? null;
+            $operations[$transcodeIndex]['trim_end_sec'] = $operations[$trimIndex]['trim_end_sec'] ?? null;
+            array_splice($operations, $trimIndex, 1);
+        }
+
+        return $operations;
     }
 
     private function findDuplicate(User $user, string $contentHash): ?Video

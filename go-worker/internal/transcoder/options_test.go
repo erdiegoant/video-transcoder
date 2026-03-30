@@ -45,6 +45,26 @@ func TestBuildTranscodeArgs(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "mp4 with trim start and end",
+			op:   payload.Operation{Format: "mp4", CRF: 28, TrimStart: 10, TrimEnd: 60},
+			want: []string{"-ss", "10.000000", "-i", "in.mp4", "-c:v", "libx264", "-crf", "28", "-to", "60.000000", "out.webm"},
+		},
+		{
+			name: "mp4 with trim start only",
+			op:   payload.Operation{Format: "mp4", CRF: 28, TrimStart: 30},
+			want: []string{"-ss", "30.000000", "-i", "in.mp4", "-c:v", "libx264", "-crf", "28", "out.webm"},
+		},
+		{
+			name: "mp4 with resolution and trim",
+			op:   payload.Operation{Format: "mp4", Resolution: "1280x720", CRF: 28, TrimStart: 5, TrimEnd: 45},
+			want: []string{"-ss", "5.000000", "-i", "in.mp4", "-c:v", "libx264", "-crf", "28", "-vf", "scale=1280:720", "-to", "45.000000", "out.webm"},
+		},
+		{
+			name:    "trim end before start returns error",
+			op:      payload.Operation{Format: "mp4", TrimStart: 60, TrimEnd: 10},
+			wantErr: true,
+		},
+		{
 			name:    "non-numeric width returns error",
 			op:      payload.Operation{Format: "mp4", Resolution: "abcx720"},
 			wantErr: true,

@@ -31,18 +31,23 @@ class TranscodeJobService
         $operation = ['type' => $job->operation_type];
 
         return match ($job->operation_type) {
-            'transcode' => array_merge($operation, [
-                'format' => $job->target_format,
-                'resolution' => $job->target_resolution,
-                'crf' => 28,
-            ]),
+            'transcode' => array_merge(
+                $operation,
+                [
+                    'format' => $job->target_format,
+                    'resolution' => $job->target_resolution,
+                    'crf' => 28,
+                ],
+                $job->trim_start_sec !== null ? ['trim_start' => $job->trim_start_sec] : [],
+                $job->trim_end_sec !== null ? ['trim_end' => $job->trim_end_sec] : [],
+            ),
             'thumbnail' => array_merge($operation, [
                 'at_second' => $job->thumbnail_at_sec ?? 3.0,
                 'format' => $job->target_format ?? 'jpg',
             ]),
             'trim' => array_merge($operation, [
-                'start_sec' => $job->trim_start_sec,
-                'end_sec' => $job->trim_end_sec,
+                'trim_start' => $job->trim_start_sec,
+                'trim_end' => $job->trim_end_sec,
             ]),
             default => $operation,
         };

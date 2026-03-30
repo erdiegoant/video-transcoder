@@ -92,8 +92,37 @@ it('builds correct trim operation flags', function () {
     $operation = $this->service->buildSingleJobPayload($job)['operations'][0];
 
     expect($operation['type'])->toBe('trim');
-    expect($operation['start_sec'])->toBe(10.0);
-    expect($operation['end_sec'])->toBe(60.0);
+    expect($operation['trim_start'])->toBe(10.0);
+    expect($operation['trim_end'])->toBe(60.0);
+});
+
+it('includes trim params in transcode operation when set on job', function () {
+    $video = Video::factory()->create();
+    $job = TranscodeJob::factory()->create([
+        'video_id' => $video->id,
+        'operation_type' => 'transcode',
+        'target_format' => 'mp4',
+        'target_resolution' => '1280x720',
+        'trim_start_sec' => 5.0,
+        'trim_end_sec' => 30.0,
+    ]);
+
+    $operation = $this->service->buildSingleJobPayload($job)['operations'][0];
+
+    expect($operation['type'])->toBe('transcode')
+        ->and($operation['format'])->toBe('mp4')
+        ->and($operation['trim_start'])->toBe(5.0)
+        ->and($operation['trim_end'])->toBe(30.0);
+});
+
+it('does not include trim keys in transcode operation when not set', function () {
+    $video = Video::factory()->create();
+    $job = TranscodeJob::factory()->transcode()->create(['video_id' => $video->id]);
+
+    $operation = $this->service->buildSingleJobPayload($job)['operations'][0];
+
+    expect($operation)->not->toHaveKey('trim_start')
+        ->and($operation)->not->toHaveKey('trim_end');
 });
 
 it('dispatch job pushes one redis message per transcode job', function () {

@@ -130,7 +130,7 @@ test('download route is forbidden for another user video', function () {
         ->assertForbidden();
 });
 
-test('upload with trim creates a trim TranscodeJob', function () {
+test('upload with trim merges into a single transcode job', function () {
     $user = User::factory()->create();
 
     Storage::fake('uploads');
@@ -145,7 +145,15 @@ test('upload with trim creates a trim TranscodeJob', function () {
         ->call('transcode')
         ->assertDispatched('video-uploaded');
 
-    expect($user->videos()->first()->transcodeJobs()->where('operation_type', 'trim')->exists())->toBeTrue();
+    $jobs = $user->videos()->first()->transcodeJobs;
+
+    // trim is merged into transcode — no separate trim job
+    expect($jobs->where('operation_type', 'trim')->isEmpty())->toBeTrue();
+
+    $transcodeJob = $jobs->firstWhere('operation_type', 'transcode');
+    expect($transcodeJob)->not->toBeNull()
+        ->and((float) $transcodeJob->trim_start_sec)->toBe(5.0)
+        ->and((float) $transcodeJob->trim_end_sec)->toBe(30.0);
 });
 
 test('upload trim rejects when end time is not greater than start time', function () {
