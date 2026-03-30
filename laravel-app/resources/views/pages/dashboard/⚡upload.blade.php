@@ -14,11 +14,23 @@ new class extends Component {
 
     public bool $includeThumbnail = true;
 
+    public bool $includeTrim = false;
+
+    public string $trimStart = '0';
+
+    public string $trimEnd = '';
+
     public function transcode(VideoUploadService $uploadService): void
     {
         $this->validate([
             'video' => 'required|file|mimes:mp4,mov,avi,webm|max:512000',
         ]);
+
+        if ($this->includeTrim && $this->trimEnd !== '' && (float) $this->trimEnd <= (float) $this->trimStart) {
+            $this->addError('trimEnd', 'End time must be greater than start time.');
+
+            return;
+        }
 
         $operations = [
             ['type' => 'transcode', 'format' => 'mp4', 'resolution' => $this->targetResolution],
@@ -26,6 +38,14 @@ new class extends Component {
 
         if ($this->includeThumbnail) {
             $operations[] = ['type' => 'thumbnail', 'thumbnail_at_sec' => 3.0];
+        }
+
+        if ($this->includeTrim) {
+            $op = ['type' => 'trim', 'trim_start_sec' => (float) $this->trimStart];
+            if ($this->trimEnd !== '') {
+                $op['trim_end_sec'] = (float) $this->trimEnd;
+            }
+            $operations[] = $op;
         }
 
         try {
@@ -105,6 +125,25 @@ new class extends Component {
             <flux:checkbox wire:model="includeThumbnail" id="thumbnail" />
             <flux:label for="thumbnail">Generate thumbnail at 3 seconds</flux:label>
         </flux:field>
+
+        <div x-data>
+            <flux:field variant="inline">
+                <flux:checkbox wire:model="includeTrim" id="trim" x-model="includeTrim" />
+                <flux:label for="trim">Trim video</flux:label>
+            </flux:field>
+
+            <div x-show="$wire.includeTrim" x-cloak class="mt-3 grid grid-cols-2 gap-3">
+                <flux:field>
+                    <flux:label>Start (seconds)</flux:label>
+                    <flux:input type="number" wire:model="trimStart" min="0" step="0.1" placeholder="0" />
+                </flux:field>
+                <flux:field>
+                    <flux:label>End (seconds, optional)</flux:label>
+                    <flux:input type="number" wire:model="trimEnd" min="0" step="0.1" placeholder="e.g. 30" />
+                    <flux:error name="trimEnd" />
+                </flux:field>
+            </div>
+        </div>
 
         <flux:button
             type="submit"

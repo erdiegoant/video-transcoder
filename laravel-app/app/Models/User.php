@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\SubscriptionTier;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -30,7 +31,16 @@ class User extends Authenticatable
             'storage_used_bytes' => 'integer',
             'storage_limit_bytes' => 'integer',
             'monthly_upload_count' => 'integer',
+            'subscription_tier' => SubscriptionTier::class,
         ];
+    }
+
+    public function upgradeTier(SubscriptionTier $tier): void
+    {
+        $this->forceFill([
+            'subscription_tier' => $tier,
+            'storage_limit_bytes' => $tier->storageLimitBytes(),
+        ])->save();
     }
 
     public function videos(): HasMany

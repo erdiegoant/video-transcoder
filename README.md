@@ -31,7 +31,8 @@ Browser ←─ WebSocket (Reverb) ─── Laravel (upload + dashboard) → Red
 ## Features
 
 - Video upload with quota enforcement (per-user storage + monthly limits)
-- Three operation types: **transcode** (format/resolution), **trim** (start/end), **thumbnail** (frame extraction)
+- Three operation types: **transcode** (format/resolution), **trim** (start/end seconds), **thumbnail** (frame extraction)
+- Self-service subscription tiers (Free 500 MB / Pro 5 GB / Enterprise 50 GB) — plan selector in the dashboard sidebar
 - Real-time job status updates via Laravel Reverb WebSockets (no polling)
 - Presigned download URLs for processed files
 - HMAC-signed webhook callbacks between Go and Laravel
@@ -96,6 +97,8 @@ The `docker-compose.override.yml` mounts `laravel-app/` into the running contain
 - [x] MinIO/S3 storage integration
 - [x] Webhook handler (HMAC-verified, idempotent)
 - [x] Livewire dashboard (upload + video list with real-time WebSocket updates via Reverb)
+- [x] Trim operation UI in upload component (start/end time inputs)
+- [x] Self-service subscription tier selector (Free / Pro / Enterprise)
 - [x] Scheduled commands (stuck job recovery, expired file pruning)
 - [x] Docker Compose full-stack setup
 - [x] Go worker service (FFmpeg, Redis queue, MinIO, HMAC callback)

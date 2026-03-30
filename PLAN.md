@@ -56,6 +56,9 @@
 - [x] **Step 1.2** — Go worker service → [docs/step-1.2-go-worker.md](docs/step-1.2-go-worker.md)
 - [x] **Step 1.5** — Scheduled commands: ReconcileStuckJobs + PruneExpiredVideos (13 tests)
 
+- [x] **Step 1.6** — Subscription tier UI: `SubscriptionTier` enum (`Free`/`Pro`/`Enterprise`), `User::upgradeTier()`, self-service plan selector in dashboard sidebar
+- [x] **Step 1.7** — Trim operation UI: start/end time inputs in the upload component (backend was already complete)
+
 ### Remaining (Phase 1)
 None — Phase 1 is complete.
 
@@ -85,6 +88,16 @@ ALTER TABLE users ADD COLUMN monthly_upload_reset   TIMESTAMP;
 ALTER TABLE users ADD COLUMN storage_used_bytes     BIGINT DEFAULT 0;
 ALTER TABLE users ADD COLUMN storage_limit_bytes    BIGINT DEFAULT 524288000; -- 500MB free
 ```
+
+**Tier limits** (defined in `App\Enums\SubscriptionTier`):
+
+| Tier | Storage | Monthly uploads |
+|---|---|---|
+| Free | 500 MB | 20 |
+| Pro | 5 GB | 200 |
+| Enterprise | 50 GB | 2 000 |
+
+Users self-select their tier from the dashboard sidebar. No billing — tier changes take effect immediately. `User::upgradeTier(SubscriptionTier $tier)` updates both `subscription_tier` and `storage_limit_bytes` atomically via `forceFill`.
 
 ### `videos` table
 

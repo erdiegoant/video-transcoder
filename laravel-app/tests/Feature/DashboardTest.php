@@ -130,6 +130,39 @@ test('download route is forbidden for another user video', function () {
         ->assertForbidden();
 });
 
+test('upload with trim creates a trim TranscodeJob', function () {
+    $user = User::factory()->create();
+
+    Storage::fake('uploads');
+    Bus::fake();
+
+    Livewire::actingAs($user)
+        ->test('pages::dashboard.upload')
+        ->set('video', UploadedFile::fake()->create('clip.mp4', 1024, 'video/mp4'))
+        ->set('includeTrim', true)
+        ->set('trimStart', '5')
+        ->set('trimEnd', '30')
+        ->call('transcode')
+        ->assertDispatched('video-uploaded');
+
+    expect($user->videos()->first()->transcodeJobs()->where('operation_type', 'trim')->exists())->toBeTrue();
+});
+
+test('upload trim rejects when end time is not greater than start time', function () {
+    $user = User::factory()->create();
+
+    Storage::fake('uploads');
+
+    Livewire::actingAs($user)
+        ->test('pages::dashboard.upload')
+        ->set('video', UploadedFile::fake()->create('clip.mp4', 1024, 'video/mp4'))
+        ->set('includeTrim', true)
+        ->set('trimStart', '30')
+        ->set('trimEnd', '10')
+        ->call('transcode')
+        ->assertHasErrors(['trimEnd']);
+});
+
 test('download route redirects to presigned url for own completed job', function () {
     $user = User::factory()->create();
     $video = Video::factory()->completed()->create(['user_id' => $user->id]);
