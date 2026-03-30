@@ -51,7 +51,7 @@ class VideoController extends Controller
 
         abort_if($job->video_id !== $video->id || $job->status !== TranscodeStatus::Completed, 404);
 
-        $url = Storage::disk('outputs')->temporaryUrl($job->output_path, now()->addMinutes(15));
+        $url = Storage::disk('outputs-public')->temporaryUrl($job->output_path, now()->addMinutes(15));
 
         return redirect($url);
     }

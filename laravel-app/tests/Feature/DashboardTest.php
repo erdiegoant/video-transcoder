@@ -139,6 +139,7 @@ test('download route redirects to presigned url for own completed job', function
     ]);
 
     Storage::fake('outputs');
+    Storage::fake('outputs-public');
     Storage::disk('outputs')->put('outputs/users/1/abc/video.mp4', 'fake content');
 
     $this->actingAs($user)
