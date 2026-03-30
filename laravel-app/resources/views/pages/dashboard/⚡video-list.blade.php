@@ -162,7 +162,7 @@ new class extends Component {
                                     </div>
 
                                     @if ($job->status->value === 'completed' && $job->output_path)
-                                        <a href="{{ route('videos.download', [$video, $job]) }}">
+                                        <a href="{{ route('videos.download', [$video, $job]) }}" target="_blank">
                                             <flux:button variant="ghost" size="sm" icon="arrow-down-tray">
                                                 Download
                                             </flux:button>
