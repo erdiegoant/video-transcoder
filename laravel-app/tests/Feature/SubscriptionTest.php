@@ -50,7 +50,7 @@ test('subscription component renders with current tier highlighted', function ()
     $user = User::factory()->create(['subscription_tier' => 'free']);
 
     Livewire::actingAs($user)
-        ->test('pages::dashboard.subscription')
+        ->test('pages::settings.subscription')
         ->assertSee('Current plan')
         ->assertSee('Free')
         ->assertSee('Pro')
@@ -61,7 +61,7 @@ test('user can change tier to pro via subscription component', function () {
     $user = User::factory()->create(['subscription_tier' => 'free']);
 
     Livewire::actingAs($user)
-        ->test('pages::dashboard.subscription')
+        ->test('pages::settings.subscription')
         ->call('changeTier', 'pro');
 
     expect($user->fresh()->subscription_tier)->toEqual(SubscriptionTier::Pro)
@@ -72,7 +72,7 @@ test('subscription component rejects invalid tier value', function () {
     $user = User::factory()->create();
 
     Livewire::actingAs($user)
-        ->test('pages::dashboard.subscription')
+        ->test('pages::settings.subscription')
         ->call('changeTier', 'invalid-tier')
         ->assertStatus(422);
 });
